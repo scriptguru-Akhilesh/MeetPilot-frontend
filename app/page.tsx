@@ -15,8 +15,7 @@ import {
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import SplashScreen from "@/components/SplashScreen";
-import { motion } from "framer-motion";
-
+import { useRouter } from "next/navigation";
 const features = [
   {
     title: "AI MOM Generation",
@@ -50,6 +49,7 @@ const history = [
 export default function HomePage() {
   const [dark, setDark] = useState(true);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", dark);
@@ -58,6 +58,8 @@ export default function HomePage() {
   if (loading) {
     return <SplashScreen onDone={() => setLoading(false)} />;
   }
+
+  
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-[var(--background)]">

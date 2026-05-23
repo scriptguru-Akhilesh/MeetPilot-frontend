@@ -74,9 +74,16 @@ function DashboardContent() {
   const [stats, setStats] = useState({ open: 0, inProgress: 0, done: 0 });
   const [loading, setLoading] = useState(true);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
+  const hasShownCalendarToast = useRef(false);
   const [showDisconnectModal, setShowDisconnectModal] = useState(false);
   const [dismissedReadyMeetingIds, setDismissedReadyMeetingIds] = useState<Set<string>>(
-    () => new Set(),
+    () => {
+      if (typeof window === "undefined") return new Set();
+
+      const stored = localStorage.getItem("dismissedReadyMeetings");
+
+      return stored ? new Set(JSON.parse(stored)) : new Set();
+    },
   );
 
   // Google Calendar state
@@ -182,8 +189,14 @@ function DashboardContent() {
       return;
     }
 
-    if (searchParams.get("calendar") === "connected") {
+    if (
+      searchParams.get("calendar") === "connected" &&
+      !hasShownCalendarToast.current
+    ) {
+      hasShownCalendarToast.current = true;
+
       showToast("Google meet connected successfully!", "success");
+
       router.replace("/dashboard");
     }
 
@@ -219,7 +232,7 @@ function DashboardContent() {
       await authFetch("/api/calendar/disconnect", { method: "DELETE" });
       setCalendarConnected(false);
       setShowDisconnectModal(false);
-      showToast("Google Calendar disconnected.", "success");
+      showToast("Google meet disconnected.", "success");
     } catch (err) {
       showToast((err as Error).message, "error");
     } finally {
@@ -307,9 +320,17 @@ function DashboardContent() {
   const viewReadyTranscript = (meetingId: string) => {
     setDismissedReadyMeetingIds((current) => {
       const next = new Set(current);
+
       next.add(meetingId);
+
+      localStorage.setItem(
+        "dismissedReadyMeetings",
+        JSON.stringify(Array.from(next)),
+      );
+
       return next;
     });
+
     router.push(`/meetings/${meetingId}`);
   };
 
@@ -347,7 +368,7 @@ function DashboardContent() {
                 </div>
                 <button
                   onClick={connectCalendar}
-                  className="rounded-lg primary-gradient px-5 py-2 text-sm font-semibold text-[var(--background)] shadow-sm hover:opacity-95"
+                  className="rounded-lg primary-gradient px-5 py-2 text-sm font-semibold text-[var(--background)] shadow-sm hover:opacity-95 cursor-pointer"
                 >
                   Connect →
                 </button>
@@ -792,7 +813,7 @@ function DashboardContent() {
                 type="button"
                 onClick={() => setShowDisconnectModal(false)}
                 disabled={isDisconnecting}
-                className="rounded-lg border border-[var(--border)] cursor-pointer bg-[var(--muted-bg)] px-5 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:border-[var(--secondary)] disabled:opacity-50"
+                className="rounded-lg border border-[var(--border)] cursor-pointer bg-[var(--muted-bg)] px-5 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:border-[var(--secondary)] disabled:opacity-50 cursor-pointer"
               >
                 Keep connected
               </button>
@@ -800,7 +821,7 @@ function DashboardContent() {
                 type="button"
                 onClick={disconnectCalendar}
                 disabled={isDisconnecting}
-                className="rounded-lg border border-[var(--border)] bg-[color:var(--danger,#ef4444)] px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-lg border border-[var(--border)] bg-[color:var(--danger,#ef4444)] px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
               >
                 {isDisconnecting ? "Disconnecting..." : "Disconnect"}
               </button>

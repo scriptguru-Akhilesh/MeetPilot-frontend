@@ -135,7 +135,7 @@ export default function Sidebar() {
             ">
                 {/* Logo Section */}
                 <div className="mb-8 px-1">
-                    <Link href="/dashboard" className="flex items-center gap-3 group">
+                    <Link href="/" className="flex items-center gap-3 group">
                         <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-xl bg-[var(--muted-bg)] transition-transform group-hover:scale-105">
                             <Image
                                 src="/images/logo.png"
@@ -146,7 +146,7 @@ export default function Sidebar() {
                             />
                         </div>
 
-                        <div className="flex flex-col min-w-0">
+                        <div className="flex flex-col min-w-0 " >
                             <span className="block truncate text-lg font-bold tracking-tight text-[var(--foreground)]">
                                 meet<span className="text-[var(--primary)] font-extrabold">Pilot</span>
                             </span>

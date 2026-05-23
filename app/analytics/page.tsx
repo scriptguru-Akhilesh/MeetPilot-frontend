@@ -152,93 +152,90 @@ export default function AnalyticsPage() {
             })}
           </div>
         </section>
+        <div className="flex flex-col lg:flex-row w-full gap-6">
+          {/* MOM PERFORMANCE */}
+          <section className="w-full lg:w-1/2 rounded-lg border border-[var(--border)] bg-[var(--card)] p-6 shadow-[var(--shadow)]">
+            <h2 className="text-xl font-semibold">MOM performance</h2>
 
-        <div className="grid gap-6 xl:grid-cols-[1fr_0.9fr]">
-          <section className="rounded-lg border border-[var(--border)] bg-[var(--card)] p-6 shadow-[var(--shadow)]">
-            <h2 className="text-xl font-semibold">Action item status</h2>
-            <div className="mt-5 grid gap-4 md:grid-cols-3">
-              {actionRows.map((item) => (
-                <div key={item.label} className="rounded-lg border border-[var(--border)] bg-[var(--muted-bg)] p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm font-medium text-[var(--muted)]">{item.label}</p>
-                    <StatusBadge status={item.status} />
+            <div className="mt-5 space-y-4">
+              {[
+                {
+                  label: "Generated",
+                  value: analytics.generatedMeetings,
+                  percent: analytics.momRate,
+                  tone: "bg-emerald-500",
+                },
+                {
+                  label: "Pending",
+                  value: analytics.pendingMeetings,
+                  percent: meetings.length
+                    ? Math.round(
+                      (analytics.pendingMeetings / meetings.length) * 100
+                    )
+                    : 0,
+                  tone: "bg-blue-500",
+                },
+                {
+                  label: "Failed",
+                  value: analytics.failedMeetings,
+                  percent: meetings.length
+                    ? Math.round(
+                      (analytics.failedMeetings / meetings.length) * 100
+                    )
+                    : 0,
+                  tone: "bg-rose-500",
+                },
+              ].map((item) => (
+                <div
+                  key={item.label}
+                  className="rounded-lg border border-[var(--border)] bg-[var(--muted-bg)] p-4"
+                >
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium">{item.label}</p>
+
+                    <p className="text-sm text-[var(--muted)]">
+                      {item.value} meetings
+                    </p>
                   </div>
-                  <p className="mt-4 text-3xl font-semibold">{item.value}</p>
+
                   <div className="mt-3 h-2 overflow-hidden rounded-full bg-[var(--border)]">
                     <div
-                      className="h-full rounded-full bg-[var(--secondary)]"
-                      style={{ width: `${percentOfActions(item.value)}%` }}
+                      className={`h-full rounded-full ${item.tone}`}
+                      style={{ width: `${item.percent}%` }}
                     />
                   </div>
+
                   <p className="mt-2 text-sm text-[var(--muted)]">
-                    {percentOfActions(item.value)}% of all actions
+                    {item.percent}% of meetings
                   </p>
                 </div>
               ))}
             </div>
 
             <div className="mt-8">
-              <h3 className="text-base font-semibold">Top assignees</h3>
-              <div className="mt-4 space-y-3">
-                {analytics.topAssignees.length ? (
-                  analytics.topAssignees.map(([name, count]) => (
-                    <div key={name} className="rounded-lg border border-[var(--border)] bg-[var(--muted-bg)] p-4">
-                      <div className="flex items-center justify-between gap-3">
-                        <p className="text-sm font-medium text-[var(--foreground)]">{name}</p>
-                        <p className="text-sm text-[var(--muted)]">{count} actions</p>
-                      </div>
-                      <div className="mt-3 h-2 overflow-hidden rounded-full bg-[var(--border)]">
-                        <div
-                          className="h-full rounded-full bg-[var(--secondary)]"
-                          style={{ width: `${percentOfActions(count)}%` }}
-                        />
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="rounded-lg border border-dashed border-[var(--border)] bg-[var(--muted-bg)] p-5 text-sm text-[var(--muted)]">
-                    No assignee data yet.
-                  </div>
-                )}
-              </div>
-            </div>
-          </section>
-
-          <section className="rounded-lg border border-[var(--border)] bg-[var(--card)] p-6 shadow-[var(--shadow)]">
-            <h2 className="text-xl font-semibold">MOM performance</h2>
-            <div className="mt-5 space-y-4">
-              {[
-                { label: "Generated", value: analytics.generatedMeetings, percent: analytics.momRate, tone: "bg-emerald-500" },
-                { label: "Pending", value: analytics.pendingMeetings, percent: meetings.length ? Math.round((analytics.pendingMeetings / meetings.length) * 100) : 0, tone: "bg-blue-500" },
-                { label: "Failed", value: analytics.failedMeetings, percent: meetings.length ? Math.round((analytics.failedMeetings / meetings.length) * 100) : 0, tone: "bg-rose-500" },
-              ].map((item) => (
-                <div key={item.label} className="rounded-lg border border-[var(--border)] bg-[var(--muted-bg)] p-4">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium">{item.label}</p>
-                    <p className="text-sm text-[var(--muted)]">{item.value} meetings</p>
-                  </div>
-                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-[var(--border)]">
-                    <div className={`h-full rounded-full ${item.tone}`} style={{ width: `${item.percent}%` }} />
-                  </div>
-                  <p className="mt-2 text-sm text-[var(--muted)]">{item.percent}% of meetings</p>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-8">
               <h3 className="text-base font-semibold">Recent meetings</h3>
+
               <div className="mt-4 space-y-3">
                 {analytics.recentMeetings.length ? (
                   analytics.recentMeetings.map((meeting) => (
-                    <div key={meeting._id} className="rounded-lg border border-[var(--border)] bg-[var(--muted-bg)] p-4">
+                    <div
+                      key={meeting._id}
+                      className="rounded-lg border border-[var(--border)] bg-[var(--muted-bg)] p-4"
+                    >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold">{meeting.title}</p>
+                          <p className="truncate text-sm font-semibold">
+                            {meeting.title}
+                          </p>
+
                           <p className="mt-1 text-xs text-[var(--muted)]">
                             {new Date(meeting.date).toLocaleDateString()}
                           </p>
                         </div>
-                        <StatusBadge status={meeting.emailStatus || "pending"} />
+
+                        <StatusBadge
+                          status={meeting.emailStatus || "pending"}
+                        />
                       </div>
                     </div>
                   ))
@@ -248,6 +245,69 @@ export default function AnalyticsPage() {
                   </div>
                 )}
               </div>
+            </div>
+          </section>
+
+          {/* RECENT ACTIVITY */}
+          <section className="w-full lg:w-1/2 rounded-lg border border-[var(--border)] bg-[var(--card)] p-6 shadow-[var(--shadow)]">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold">Recent activity</h2>
+
+              <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
+                Live
+              </span>
+            </div>
+
+            <div className="mt-6 space-y-4">
+              {analytics.recentMeetings.length ? (
+                analytics.recentMeetings.map((meeting) => (
+                  <div
+                    key={meeting._id}
+                    className="flex items-start gap-4 rounded-xl border border-[var(--border)] bg-[var(--muted-bg)] p-4 transition-all hover:shadow-md"
+                  >
+                    <div className="mt-1 flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300">
+                      📄
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="truncate text-sm font-semibold">
+                            {meeting.title}
+                          </p>
+
+                          <p className="mt-1 text-xs text-[var(--muted)]">
+                            MOM generated successfully
+                          </p>
+                        </div>
+
+                        <StatusBadge
+                          status={meeting.emailStatus || "pending"}
+                        />
+                      </div>
+
+                      <div className="mt-3 flex items-center gap-2 text-xs text-[var(--muted)]">
+                        <span>
+                          {new Date(meeting.date).toLocaleDateString()}
+                        </span>
+
+                        <span>•</span>
+
+                        <span>
+                          {new Date(meeting.date).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-lg border border-dashed border-[var(--border)] bg-[var(--muted-bg)] p-5 text-sm text-[var(--muted)]">
+                  No recent activity found.
+                </div>
+              )}
             </div>
           </section>
         </div>
