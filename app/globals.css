@@ -1,0 +1,233 @@
+@import "tailwindcss";
+
+/* =========================
+   THEME VARIABLES
+========================= */
+
+:root {
+  /* LIGHT */
+
+  --background: #f6f7fb;
+  --foreground: #111827;
+
+  --card: rgba(255, 255, 255, 0.75);
+  --card-foreground: #111827;
+
+  --primary: #111827;
+  --primary-light: #374151;
+
+  --secondary: #6366f1;
+
+  --border: rgba(15, 23, 42, 0.08);
+
+  --muted: #6b7280;
+  --muted-bg: rgba(99, 102, 241, 0.06);
+
+  --shadow: 0 10px 40px rgba(15, 23, 42, 0.06);
+
+  --gradient-primary: linear-gradient(
+    135deg,
+    #111827 0%,
+    #374151 100%
+  );
+}
+
+.dark {
+  /* REFINED PREMIUM DARK (MONOCHROME + INDIGO POP) */
+  --background: #0d1117;           /* Kept your exact base canvas */
+  --foreground: #f3f4f6;           /* Kept your crisp text tone */
+
+  /* ELEVATED GLASSMORPHISM SLOTS */
+  --card: rgba(22, 27, 34, 0.65);  /* Clean, rich dark-slate glass layer */
+  --card-foreground: #f9fafb;
+
+  /* METALLIC SOLID LIGHTS */
+  --primary: #ffffff;              /* Sharp pure white for premium typography */
+  --primary-light: #e5e7eb;        /* Soft platinum for sub-headers */
+
+  /* THE INDIGO POP */
+  --secondary: #6366f1;            /* Vibrant, clean indigo accent line */
+
+  /* ULTRA-FINE STRUCTURE */
+  --border: rgba(255, 255, 255, 0.08); /* Crisp, precise bounding line */
+
+  /* TEXT REFINEMENT & BACKPLATES */
+  --muted: #8c95a0;                /* Highly readable neutral mid-tone */
+  --muted-bg: rgba(255, 255, 255, 0.03); /* Soft recessed background layer */
+
+  /* SHADOW MATRIX */
+  --shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.65);
+
+  /* SMOOTH PLATINUM METALLIC GRADIENT */
+  --gradient-primary: linear-gradient(
+    135deg,
+    #ffffff 0%,
+    #e5e7eb 50%,
+    #9ca3af 100%
+  );
+}
+/* =========================
+   TAILWIND V4 THEME
+========================= */
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+/* =========================
+   BASE
+========================= */
+
+* {
+  box-sizing: border-box;
+  border-color: var(--border);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+
+  background: var(--background);
+  color: var(--foreground);
+
+  font-family:
+    var(--font-poppins),
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+
+  transition:
+    background 0.25s ease,
+    color 0.25s ease;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+/* =========================
+   UTILITIES
+========================= */
+
+/* .glass-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(14px);
+} */
+
+.primary-gradient {
+  background: var(--gradient-primary);
+}
+
+.primary-text {
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.section-padding {
+  @apply px-6 py-16 sm:px-10 lg:px-16;
+}
+
+.container-main {
+  @apply mx-auto px-6;
+  max-width: 1300px;
+}
+
+/* =========================
+   BUTTONS
+========================= */
+
+.btn-primary {
+  @apply bg-black text-white dark:bg-white dark:text-black  border border-(--border);
+  @apply rounded-2xl px-6 py-3 font-semibold transition-all duration-300;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  opacity: 0.95;
+}
+
+.btn-secondary {
+  background: var(--card);
+  color: var(--foreground);
+  border: 1px solid var(--border);
+
+  @apply rounded-2xl px-6 py-3 font-semibold transition-all duration-300;
+}
+
+.btn-secondary:hover {
+  background: var(--muted-bg);
+}
+
+/* =========================
+   BACKGROUND EFFECTS
+========================= */
+
+.glass-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: var(--shadow);
+}
+
+.grid-bg {
+  background-image:
+    linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+
+  background-size: 42px 42px;
+}
+
+.glow-effect {
+  position: absolute;
+
+  width: 400px;
+  height: 400px;
+
+  border-radius: 999px;
+
+  background: rgba(91, 82, 255, 0.18);
+
+  filter: blur(100px);
+
+  z-index: 0;
+}
+
+/* =========================
+   SCROLLBAR
+========================= */
+
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--primary);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
