@@ -8,7 +8,7 @@ import React from "react";
  */
 export function LoadingDots() {
     return (
-        <div className="flex items-center justify-center space-x-2 py-3">
+        <div className="flex items-center justify-center space-x-2 py-3 w-full h-full m-auto" >
             <style dangerouslySetInnerHTML={{
                 __html: `
         @keyframes modern-bounce {

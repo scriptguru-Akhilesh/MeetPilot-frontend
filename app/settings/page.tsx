@@ -43,7 +43,7 @@ export default function SettingsPage() {
         showToast((err as Error).message, "error");
       })
       .finally(() => setLoading(false));
-  }, [router, setValue]);
+  }, [router, setValue, showToast]);
 
   async function onSubmit(values: ProfileForm) {
     try {
@@ -69,51 +69,54 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen px-6 py-10 text-slate-950 sm:px-10 lg:px-16">
-        <div className="mx-auto max-w-4xl rounded-[2rem] bg-white p-10 shadow-xl">
-          Loading profile…
+      <div className="px-4 py-6 text-[var(--foreground)] sm:px-6 lg:px-10">
+        <div className="mx-auto max-w-[1300px] rounded-lg border border-[var(--border)] bg-[var(--card)] p-6 shadow-[var(--shadow)]">
+          Loading profile...
         </div>
-      </main>
+      </div>
     );
   }
 
   return (
-    <main className="min-h-screen px-6 py-10 text-slate-950 sm:px-10 lg:px-16">
-      <div className="mx-auto max-w-3xl rounded-[2rem] bg-white p-10 shadow-xl">
+    <div className="px-4 py-6 text-[var(--foreground)] sm:px-6 lg:px-10">
+      <section className="mx-auto max-w-[900px] rounded-lg border border-[var(--border)] bg-[var(--card)] p-6 shadow-[var(--shadow)]">
         <div className="mb-8">
+          <p className="text-sm uppercase tracking-[0.24em] text-[var(--secondary)]">
+            Settings
+          </p>
           <h1 className="text-3xl font-semibold">Account settings</h1>
-          <p className="mt-2 text-slate-600">
+          <p className="mt-2 text-[var(--muted)]">
             Update your profile details and password.
           </p>
         </div>
 
         <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
-          <label className="space-y-2 text-sm font-medium text-slate-900">
+          <label className="space-y-2 text-sm font-medium text-[var(--foreground)]">
             Name
             <input
               {...register("name")}
-              className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-slate-400"
+              className="w-full rounded-lg border border-[var(--border)] bg-[var(--muted-bg)] px-4 py-3 text-sm outline-none focus:border-[var(--secondary)]"
             />
             {errors.name && (
               <p className="text-sm text-rose-600">{errors.name.message}</p>
             )}
           </label>
-          <label className="space-y-2 text-sm font-medium text-slate-900">
+          <label className="space-y-2 text-sm font-medium text-[var(--foreground)]">
             Email
             <input
               {...register("email")}
-              className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-slate-400"
+              className="w-full rounded-lg border border-[var(--border)] bg-[var(--muted-bg)] px-4 py-3 text-sm outline-none focus:border-[var(--secondary)]"
             />
             {errors.email && (
               <p className="text-sm text-rose-600">{errors.email.message}</p>
             )}
           </label>
-          <label className="space-y-2 text-sm font-medium text-slate-900">
+          <label className="space-y-2 text-sm font-medium text-[var(--foreground)]">
             New password (optional)
             <input
               type="password"
               {...register("password")}
-              className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-slate-400"
+              className="w-full rounded-lg border border-[var(--border)] bg-[var(--muted-bg)] px-4 py-3 text-sm outline-none focus:border-[var(--secondary)]"
               placeholder="Leave blank to keep current password"
             />
             {errors.password && (
@@ -121,7 +124,7 @@ export default function SettingsPage() {
             )}
           </label>
 
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-[var(--muted)]">
             Your profile changes will be saved and applied immediately.
           </p>
 
@@ -132,13 +135,13 @@ export default function SettingsPage() {
             <button
               type="button"
               onClick={handleSignOut}
-              className="rounded-3xl border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-950 transition hover:bg-slate-100"
+              className="rounded-lg border border-[var(--border)] bg-[var(--muted-bg)] px-6 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:border-rose-200 hover:text-rose-600"
             >
               Sign out
             </button>
           </div>
         </form>
-      </div>
-    </main>
+      </section>
+    </div>
   );
 }

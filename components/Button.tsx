@@ -6,10 +6,10 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantStyles: Record<string, string> = {
-  primary: "bg-slate-950 text-white hover:bg-slate-800",
+  primary: "primary-gradient text-[var(--background)] shadow-sm hover:opacity-95",
   secondary:
-    "bg-white text-slate-950 border border-slate-200 hover:bg-slate-100",
-  ghost: "bg-transparent text-slate-900 hover:bg-slate-100",
+    "bg-[var(--card)] text-[var(--foreground)] border border-[var(--border)] hover:bg-[var(--muted-bg)]",
+  ghost: "bg-transparent text-[var(--foreground)] hover:bg-[var(--muted-bg)]",
 };
 
 const sizeStyles: Record<string, string> = {
@@ -26,7 +26,7 @@ export function Button({
 }: ButtonProps) {
   return (
     <button
-      className={`inline-flex items-center justify-center rounded-xl text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${variantStyles[variant]} ${sizeStyles[size]} ${className}`}
+      className={`inline-flex items-center justify-center rounded-xl text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 cursor-pointer ${variantStyles[variant]} ${sizeStyles[size]} ${className}`}
       {...props}
     />
   );

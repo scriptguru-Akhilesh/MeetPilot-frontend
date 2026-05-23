@@ -5,10 +5,24 @@ import { authFetch } from "@/lib/api";
 import { getToken, clearToken } from "@/lib/auth";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useToast } from "@/components/useToast";
+import { CalendarDays, Plus, Users } from "lucide-react";
+
+interface MeetingParticipant {
+  name: string;
+  email: string;
+}
+
+interface Meeting {
+  _id: string;
+  title: string;
+  date: string;
+  emailStatus: string;
+  participants?: MeetingParticipant[];
+}
 
 export default function MeetingsPage() {
   const router = useRouter();
-  const [meetings, setMeetings] = useState<any[]>([]);
+  const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [loading, setLoading] = useState(true);
   const { showToast } = useToast();
 
@@ -18,7 +32,7 @@ export default function MeetingsPage() {
       return;
     }
 
-    authFetch<any[]>("/api/meetings")
+    authFetch<Meeting[]>("/api/meetings")
       .then(setMeetings)
       .catch((err) => {
         showToast(err.message, "error");
@@ -28,79 +42,101 @@ export default function MeetingsPage() {
         }
       })
       .finally(() => setLoading(false));
-  }, [router]);
+  }, [router, showToast]);
 
   return (
-    <main className="min-h-screen px-6 py-10 text-slate-950 sm:px-10 lg:px-16">
-      <div className="mx-auto max-w-6xl space-y-8">
-        <div className="rounded-[2rem] bg-white p-8 shadow-xl">
+    <div className="px-4 py-6 text-[var(--foreground)] sm:px-6 lg:px-10">
+      <div className="mx-auto max-w-[1300px] space-y-6">
+        <section className="relative overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--card)] p-6 shadow-[var(--shadow)]">
+          <div className="absolute right-0 top-0 h-32 w-32 rounded-bl-full bg-[var(--muted-bg)]" />
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h1 className="text-3xl font-semibold">Meeting history</h1>
-              <p className="mt-2 text-slate-600">
+            <div className="relative">
+              <p className="text-sm uppercase tracking-[0.24em] text-[var(--secondary)]">
+                Meetings
+              </p>
+              <h1 className="mt-2 text-3xl font-semibold">Meeting history</h1>
+              <p className="mt-2 max-w-2xl text-[var(--muted)]">
                 Review your generated MOMs and send follow-up emails again.
               </p>
             </div>
             <button
+              type="button"
               onClick={() => router.push("/dashboard")}
-              className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800"
+              className="relative inline-flex items-center justify-center gap-2 rounded-lg primary-gradient px-5 py-3 text-sm font-semibold text-[var(--background)] shadow-sm transition hover:opacity-95 cursor-pointer"
             >
+              <Plus size={17} />
               New meeting
             </button>
           </div>
-        </div>
+        </section>
 
         {loading ? (
           <div className="grid gap-4">
-            <div className="h-28 rounded-[1.75rem] bg-slate-100" />
-            <div className="h-28 rounded-[1.75rem] bg-slate-100" />
+            <div className="h-28 animate-pulse rounded-lg border border-[var(--border)] bg-[var(--muted-bg)]" />
+            <div className="h-28 animate-pulse rounded-lg border border-[var(--border)] bg-[var(--muted-bg)]" />
           </div>
         ) : meetings.length === 0 ? (
-          <div className="rounded-[1.75rem] border border-dashed border-slate-300 bg-white p-8 text-slate-600">
-            No meetings available yet.
-          </div>
+          <section className="rounded-lg border border-dashed border-[var(--border)] bg-[var(--card)] p-8 text-center shadow-[var(--shadow)]">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg bg-[var(--muted-bg)] text-[var(--secondary)]">
+              <CalendarDays size={22} />
+            </div>
+            <p className="mt-4 font-semibold text-[var(--foreground)]">No meetings available yet.</p>
+            <p className="mt-2 text-sm text-[var(--muted)]">
+              Schedule a meeting or generate a MOM from the dashboard.
+            </p>
+          </section>
         ) : (
           <div className="grid gap-4">
             {meetings.map((meeting) => (
-              <div
+              <article
                 key={meeting._id}
-                className="rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-sm"
+                className="rounded-lg border border-[var(--border)] bg-[var(--card)] p-5 shadow-[var(--shadow)] transition hover:border-[var(--secondary)]"
               >
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="text-lg font-semibold text-slate-950">
+                  <div className="min-w-0">
+                    <p className="truncate text-lg font-semibold text-[var(--foreground)]">
                       {meeting.title}
                     </p>
-                    <p className="mt-1 text-sm text-slate-600">
+                    <p className="mt-1 flex items-center gap-2 text-sm text-[var(--muted)]">
+                      <CalendarDays size={15} />
                       {new Date(meeting.date).toLocaleDateString()}
                     </p>
                   </div>
                   <StatusBadge status={meeting.emailStatus} />
                 </div>
-                <div className="mt-4 flex flex-wrap gap-2 text-sm text-slate-600">
-                  {meeting.participants?.map((participant: any) => (
+
+                <div className="mt-4 flex flex-wrap gap-2 text-sm text-[var(--muted)]">
+                  {meeting.participants?.length ? (
+                    meeting.participants.map((participant) => (
                     <span
                       key={participant.email}
-                      className="rounded-full bg-slate-100 px-3 py-1"
+                      className="rounded-lg bg-[var(--muted-bg)] px-3 py-1"
                     >
                       {participant.name}
                     </span>
-                  ))}
+                    ))
+                  ) : (
+                    <span className="inline-flex items-center gap-2 rounded-lg bg-[var(--muted-bg)] px-3 py-1">
+                      <Users size={14} />
+                      No participants listed
+                    </span>
+                  )}
                 </div>
+
                 <div className="mt-4 flex flex-wrap gap-3">
                   <button
                     type="button"
                     onClick={() => router.push(`/meetings/${meeting._id}`)}
-                    className="rounded-2xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+                    className="rounded-lg border border-[var(--border)] bg-[var(--muted-bg)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:border-[var(--secondary)] hover:text-[var(--secondary)] cursor-pointer"
                   >
                     View details
                   </button>
                 </div>
-              </div>
+              </article>
             ))}
           </div>
         )}
       </div>
-    </main>
+    </div>
   );
 }

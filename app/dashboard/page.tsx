@@ -9,6 +9,7 @@ import { authFetch } from "@/lib/api";
 import { clearToken, getToken } from "@/lib/auth";
 import { Button } from "@/components/Button";
 import { StatusBadge } from "@/components/StatusBadge";
+import { CalendarDays, CheckCircle2, FileText, Sparkles } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -23,6 +24,21 @@ interface ScheduledEvent {
   meetingId: string;
   botId: string | null;
   transcriptionEnabled: boolean;
+}
+
+interface MeetingParticipant {
+  name: string;
+  email: string;
+}
+
+interface DashboardMeeting {
+  _id: string;
+  title: string;
+  date: string;
+  emailStatus: string;
+  momStatus?: string;
+  rawTranscript?: string;
+  participants?: MeetingParticipant[];
 }
 
 // ─── Schemas ──────────────────────────────────────────────────────────────────
@@ -54,10 +70,14 @@ function DashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [meetings, setMeetings] = useState<any[]>([]);
+  const [meetings, setMeetings] = useState<DashboardMeeting[]>([]);
   const [stats, setStats] = useState({ open: 0, inProgress: 0, done: 0 });
   const [loading, setLoading] = useState(true);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
+  const [showDisconnectModal, setShowDisconnectModal] = useState(false);
+  const [dismissedReadyMeetingIds, setDismissedReadyMeetingIds] = useState<Set<string>>(
+    () => new Set(),
+  );
 
   // Google Calendar state
   const [calendarConnected, setCalendarConnected] = useState<boolean | null>(null);
@@ -116,7 +136,7 @@ function DashboardContent() {
     async (notifyReady = false) => {
       try {
         const [meetingsData, actionsStats, calendarStatus] = await Promise.all([
-          authFetch<any[]>("/api/meetings"),
+          authFetch<DashboardMeeting[]>("/api/meetings"),
           authFetch<{ open: number; inProgress: number; done: number }>("/api/actions/stats"),
           authFetch<{ connected: boolean }>("/api/calendar/status"),
         ]);
@@ -163,12 +183,15 @@ function DashboardContent() {
     }
 
     if (searchParams.get("calendar") === "connected") {
-      showToast("Google Calendar connected successfully!", "success");
-      setCalendarConnected(true);
+      showToast("Google meet connected successfully!", "success");
       router.replace("/dashboard");
     }
 
-    loadDashboard(false);
+    const loadTimer = window.setTimeout(() => {
+      loadDashboard(false);
+    }, 0);
+
+    return () => window.clearTimeout(loadTimer);
   }, [loadDashboard, router, searchParams, showToast]);
 
   useEffect(() => {
@@ -191,11 +214,11 @@ function DashboardContent() {
 
   // ─── Disconnect Google Calendar ─────────────────────────────────────────────
   async function disconnectCalendar() {
-    if (!confirm("Disconnect Google Calendar? You won't be able to schedule meetings or generate Meet links.")) return;
     setIsDisconnecting(true);
     try {
       await authFetch("/api/calendar/disconnect", { method: "DELETE" });
       setCalendarConnected(false);
+      setShowDisconnectModal(false);
       showToast("Google Calendar disconnected.", "success");
     } catch (err) {
       showToast((err as Error).message, "error");
@@ -273,120 +296,161 @@ function DashboardContent() {
   const readyMeetings = useMemo(
     () =>
       meetings.filter(
-        (meeting) => meeting.momStatus === "generated" && meeting.rawTranscript,
+        (meeting) =>
+          meeting.momStatus === "generated" &&
+          meeting.rawTranscript &&
+          !dismissedReadyMeetingIds.has(meeting._id),
       ),
-    [meetings],
+    [dismissedReadyMeetingIds, meetings],
   );
+
+  const viewReadyTranscript = (meetingId: string) => {
+    setDismissedReadyMeetingIds((current) => {
+      const next = new Set(current);
+      next.add(meetingId);
+      return next;
+    });
+    router.push(`/meetings/${meetingId}`);
+  };
 
   // ─── Render ─────────────────────────────────────────────────────────────────
   return (
-    <main className="min-h-screen bg-slate-50 px-6 py-10 text-slate-950 sm:px-10 lg:px-16">
-      <div className="mx-auto grid max-w-7xl gap-8">
+    <div className="px-4 py-6 text-[var(--foreground)] sm:px-6 lg:px-10">
+      <div className="mx-auto grid  gap-6">
 
         {/* Header stats */}
-        <div className="flex flex-col gap-3 rounded-[2rem] bg-white p-8 shadow-xl">
-          <div className="flex flex-col gap-1">
-            <p className="text-sm uppercase tracking-[0.24em] text-slate-500">Dashboard</p>
-            <h1 className="text-3xl font-semibold">Your meeting HQ</h1>
-            <p className="max-w-2xl text-slate-600">
-              Schedule meetings, generate MOM, assign tasks, and send automated summary emails.
-            </p>
-          </div>
-
-          {/* Google Calendar connect/disconnect banner */}
-          {calendarConnected === false && (
-            <div className="flex items-center justify-between rounded-[1.75rem] border border-blue-200 bg-blue-50 px-6 py-4">
-              <div>
-                <p className="font-medium text-blue-900">Connect Google Calendar</p>
-                <p className="text-sm text-blue-700">
-                  Schedule meetings and generate Meet links automatically.
+        <div className="relative overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--card)] p-6 shadow-[var(--shadow)]">
+          <div className="absolute right-0 top-0 h-36 w-36 rounded-bl-full bg-[var(--muted-bg)]" />
+          <div className="relative flex flex-col gap-6">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div className="flex flex-col gap-2">
+                <p className="text-sm uppercase tracking-[0.24em] text-[var(--secondary)]">Dashboard</p>
+                <h1 className="text-3xl font-semibold tracking-normal sm:text-4xl">Your meeting HQ</h1>
+                <p className="max-w-2xl text-[var(--muted)]">
+                  Schedule meetings, generate MOM, track actions, and send automated summary emails from one focused workspace.
                 </p>
               </div>
-              <button
-                onClick={connectCalendar}
-                className="rounded-full bg-blue-600 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-              >
-                Connect →
-              </button>
-            </div>
-          )}
-
-          {calendarConnected === true && (
-            <div className="flex items-center justify-between rounded-[1.75rem] border border-green-200 bg-green-50 px-6 py-3">
-              <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-green-500" />
-                <p className="text-sm font-medium text-green-800">Google Calendar connected</p>
+              <div className="flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--muted-bg)] px-4 py-3 text-sm text-[var(--muted)]">
+                <Sparkles size={18} className="text-[var(--secondary)]" />
+                AI minutes enabled
               </div>
-              <button
-                onClick={disconnectCalendar}
-                disabled={isDisconnecting}
-                className="rounded-full border border-red-200 bg-white px-4 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50 transition"
-              >
-                {isDisconnecting ? "Disconnecting…" : "Disconnect"}
-              </button>
             </div>
-          )}
 
-          {readyMeetings.length > 0 && (
-            <div className="flex flex-col gap-3 rounded-[1.75rem] border border-emerald-200 bg-emerald-50 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="font-semibold text-emerald-950">Transcript ready</p>
-                <p className="text-sm text-emerald-800">
-                  {readyMeetings[0].title} is ready with transcript, summary, decisions, and action items.
-                </p>
+            {/* Google Calendar connect/disconnect banner */}
+            {calendarConnected === false && (
+              <div className="flex flex-col gap-4 rounded-lg border border-[var(--border)] bg-[var(--muted-bg)] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="font-medium text-[var(--foreground)]">Connect Google Calendar</p>
+                  <p className="text-sm text-[var(--muted)]">
+                    Schedule meetings and generate Meet links automatically.
+                  </p>
+                </div>
+                <button
+                  onClick={connectCalendar}
+                  className="rounded-lg primary-gradient px-5 py-2 text-sm font-semibold text-[var(--background)] shadow-sm hover:opacity-95"
+                >
+                  Connect →
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => router.push(`/meetings/${readyMeetings[0]._id}`)}
-                className="rounded-full bg-emerald-700 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-800"
-              >
-                View transcript
-              </button>
-            </div>
-          )}
+            )}
 
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div className="rounded-[1.75rem] border border-slate-200 bg-slate-50 p-6">
-              <p className="text-sm text-slate-500">Meetings</p>
-              <p className="mt-4 text-3xl font-semibold">{meetingCount}</p>
-            </div>
-            <div className="rounded-[1.75rem] border border-slate-200 bg-slate-50 p-6">
-              <p className="text-sm text-slate-500">Open actions</p>
-              <p className="mt-4 text-3xl font-semibold">{stats.open}</p>
-            </div>
-            <div className="rounded-[1.75rem] border border-slate-200 bg-slate-50 p-6">
-              <p className="text-sm text-slate-500">Completed tasks</p>
-              <p className="mt-4 text-3xl font-semibold">{stats.done}</p>
+            {calendarConnected === true && (
+              <div className="flex flex-col gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-green-500" />
+                  <p className="text-sm font-medium text-green-800">Google meet connected</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowDisconnectModal(true)}
+                  disabled={isDisconnecting}
+                  className="rounded-lg cursor-pointer border border-red-200  px-4 py-1.5 text-sm font-medium text-red-600 transition hover:bg-red-50 disabled:opacity-50"
+                >
+                  {isDisconnecting ? "Disconnecting…" : "Disconnect"}
+                </button>
+              </div>
+            )}
+
+            {readyMeetings.length > 0 && (
+              <div className="flex flex-col gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="font-semibold text-emerald-950">Transcript ready</p>
+                  <p className="text-sm text-emerald-800">
+                    {readyMeetings[0].title} is ready with transcript, summary, decisions, and action items.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => viewReadyTranscript(readyMeetings[0]._id)}
+                  className="rounded-lg bg-emerald-700 px-5 py-2 text-sm font-semibold cursor-pointer text-white hover:bg-emerald-800"
+                >
+                  View transcript
+                </button>
+              </div>
+            )}
+
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="rounded-lg border border-[var(--border)] bg-[var(--muted-bg)] p-5">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-[var(--muted)]">Meetings</p>
+                  <CalendarDays size={18} className="text-[var(--secondary)]" />
+                </div>
+                {loading ? (
+                  <div className="mt-4 h-9 w-16 animate-pulse rounded-lg bg-[var(--border)]" />
+                ) : (
+                  <p className="mt-4 text-3xl font-semibold">{meetingCount}</p>
+                )}
+              </div>
+              <div className="rounded-lg border border-[var(--border)] bg-[var(--muted-bg)] p-5">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-[var(--muted)]">Open actions</p>
+                  <FileText size={18} className="text-[var(--secondary)]" />
+                </div>
+                {loading ? (
+                  <div className="mt-4 h-9 w-16 animate-pulse rounded-lg bg-[var(--border)]" />
+                ) : (
+                  <p className="mt-4 text-3xl font-semibold">{stats.open}</p>
+                )}
+              </div>
+              <div className="rounded-lg border border-[var(--border)] bg-[var(--muted-bg)] p-5">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-[var(--muted)]">Completed tasks</p>
+                  <CheckCircle2 size={18} className="text-[var(--secondary)]" />
+                </div>
+                {loading ? (
+                  <div className="mt-4 h-9 w-16 animate-pulse rounded-lg bg-[var(--border)]" />
+                ) : (
+                  <p className="mt-4 text-3xl font-semibold">{stats.done}</p>
+                )}
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="grid gap-8 xl:grid-cols-[1.1fr_0.9fr]">
+        <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
 
           {/* Left panel — tabs */}
-          <section className="rounded-[2rem] bg-white p-8 shadow-xl">
+          <section className="rounded-lg border border-[var(--border)] bg-[var(--card)] p-6 shadow-[var(--shadow)]">
 
             {/* Tab switcher */}
-            <div className="mb-8 flex gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-1">
+            <div className="mb-8 flex gap-2 rounded-lg border border-[var(--border)] bg-[var(--muted-bg)] p-1">
               <button
                 type="button"
                 onClick={() => setActiveTab("schedule")}
-                className={`flex-1 rounded-xl py-2 text-sm font-medium transition ${
-                  activeTab === "schedule"
-                    ? "bg-white text-slate-950 shadow-sm"
-                    : "text-slate-500 hover:text-slate-700"
-                }`}
+                className={`flex-1 rounded-xl py-2 text-sm font-medium transition cursor-pointer ${activeTab === "schedule"
+                  ? "rounded-md bg-[var(--card)] text-[var(--foreground)] shadow-sm"
+                  : "text-[var(--muted)] hover:text-[var(--foreground)] "
+                  }`}
               >
                 Schedule meeting
               </button>
               <button
                 type="button"
                 onClick={() => setActiveTab("mom")}
-                className={`flex-1 rounded-xl py-2 text-sm font-medium transition ${
-                  activeTab === "mom"
-                    ? "bg-white text-slate-950 shadow-sm"
-                    : "text-slate-500 hover:text-slate-700"
-                }`}
+                className={`flex-1 rounded-xl py-2 text-sm font-medium transition cursor-pointer ${activeTab === "mom"
+                  ? "rounded-md bg-[var(--card)] text-[var(--foreground)] shadow-sm"
+                  : "text-[var(--muted)] hover:text-[var(--foreground)]"
+                  }`}
               >
                 Generate MOM
               </button>
@@ -398,7 +462,7 @@ function DashboardContent() {
                 <div className="flex items-center justify-between gap-4 mb-6">
                   <div>
                     <h2 className="text-2xl font-semibold">Schedule a meeting</h2>
-                    <p className="mt-2 text-slate-600">
+                    <p className="mt-2 text-[var(--muted)]">
                       Creates a Google Calendar event and sends Meet link to participants.
                     </p>
                   </div>
@@ -406,7 +470,7 @@ function DashboardContent() {
 
                 {/* Scheduled event result */}
                 {scheduledEvent && (
-                  <div className="mb-6 rounded-2xl border border-green-200 bg-green-50 p-5">
+                  <div className="mb-6 rounded-lg border border-green-200 bg-green-50 p-5">
                     <p className="font-semibold text-green-900">Meeting scheduled!</p>
                     <p className="mt-1 text-sm text-green-700">{scheduledEvent.title}</p>
                     <a
@@ -431,11 +495,11 @@ function DashboardContent() {
                 )}
 
                 {!calendarConnected ? (
-                  <div className="rounded-2xl border border-dashed border-slate-300 p-8 text-center">
-                    <p className="text-slate-600">Connect Google Calendar to schedule meetings.</p>
+                  <div className="rounded-lg border border-dashed border-[var(--border)] bg-[var(--muted-bg)] p-8 text-center">
+                    <p className="text-[var(--muted)]">Connect Google Calendar to schedule meetings.</p>
                     <button
                       onClick={connectCalendar}
-                      className="mt-4 rounded-full bg-slate-950 px-6 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+                      className="mt-4 rounded-lg primary-gradient px-6 py-2 text-sm font-semibold text-[var(--background)] shadow-sm hover:opacity-95"
                     >
                       Connect Google Calendar
                     </button>
@@ -443,11 +507,11 @@ function DashboardContent() {
                 ) : (
                   <form className="space-y-6" onSubmit={handleSchedule(onSchedule)}>
                     <div className="grid gap-4 sm:grid-cols-2">
-                      <label className="space-y-2 text-sm font-medium text-slate-900">
+                      <label className="space-y-2 text-sm font-medium text-[var(--foreground)]">
                         Meeting title
                         <input
                           {...regSchedule("title")}
-                          className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-slate-400"
+                          className="w-full rounded-lg border border-[var(--border)] bg-[var(--muted-bg)] px-4 py-3 text-sm outline-none focus:border-[var(--secondary)]"
                           placeholder="Sprint planning"
                         />
                         {scheduleErrors.title && (
@@ -455,11 +519,11 @@ function DashboardContent() {
                         )}
                       </label>
 
-                      <label className="space-y-2 text-sm font-medium text-slate-900">
+                      <label className="space-y-2 text-sm font-medium text-[var(--foreground)]">
                         Duration
                         <select
                           {...regSchedule("durationMinutes")}
-                          className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-slate-400"
+                          className="w-full rounded-lg border border-[var(--border)] bg-[var(--muted-bg)] px-4 py-3 text-sm outline-none focus:border-[var(--secondary)]"
                         >
                           <option value={30}>30 minutes</option>
                           <option value={60}>1 hour</option>
@@ -469,12 +533,12 @@ function DashboardContent() {
                       </label>
                     </div>
 
-                    <label className="space-y-2 text-sm font-medium text-slate-900">
+                    <label className="space-y-2 text-sm font-medium text-[var(--foreground)]">
                       Date &amp; time
                       <input
                         type="datetime-local"
                         {...regSchedule("startTime")}
-                        className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-slate-400"
+                        className="w-full rounded-lg border border-[var(--border)] bg-[var(--muted-bg)] px-4 py-3 text-sm outline-none focus:border-[var(--secondary)]"
                       />
                       {scheduleErrors.startTime && (
                         <p className="text-sm text-rose-600">{scheduleErrors.startTime.message}</p>
@@ -482,17 +546,17 @@ function DashboardContent() {
                     </label>
 
                     {/* Dynamic participants — Schedule */}
-                    <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                    <div className="rounded-lg border border-[var(--border)] bg-[var(--muted-bg)] mt-4 p-4">
                       <div className="mb-4 flex items-center justify-between">
-                        <span className="text-sm font-medium text-slate-900">
+                        <span className="text-sm font-medium text-[var(--foreground)]">
                           Participants ({scheduleParticipants.length})
                         </span>
                         <button
                           type="button"
                           onClick={() => appendScheduleParticipant({ name: "", email: "" })}
-                          className="flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition"
+                          className="flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--card)] px-3 py-1 text-xs font-semibold text-[var(--foreground)] cursor-pointer transition hover:bg-[var(--muted-bg)]"
                         >
-                          <span className="text-base leading-none">+</span> Add participant
+                          <span className="text-base leading-none cursor-pointer">+</span> Add participant
                         </button>
                       </div>
                       {scheduleParticipants.map((field, index) => (
@@ -501,19 +565,19 @@ function DashboardContent() {
                             <input
                               {...regSchedule(`participants.${index}.name` as const)}
                               placeholder="Name"
-                              className="w-full rounded-3xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400"
+                              className="w-full rounded-lg border border-[var(--border)] bg-[var(--card)] px-4 py-3 text-sm outline-none focus:border-[var(--secondary)]"
                             />
                             <input
                               {...regSchedule(`participants.${index}.email` as const)}
                               placeholder="email@example.com"
-                              className="w-full rounded-3xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400"
+                              className="w-full rounded-lg border border-[var(--border)] bg-[var(--card)] px-4 py-3 text-sm outline-none focus:border-[var(--secondary)]"
                             />
                           </div>
                           {scheduleParticipants.length > 1 && (
                             <button
                               type="button"
                               onClick={() => removeScheduleParticipant(index)}
-                              className="mt-2.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-slate-400 hover:bg-rose-50 hover:text-rose-500 transition"
+                              className="mt-2.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-[var(--muted)] hover:bg-rose-50 hover:text-rose-500 transition"
                               aria-label="Remove participant"
                             >
                               ✕
@@ -526,8 +590,8 @@ function DashboardContent() {
                       )}
                     </div>
 
-                    <div className="flex justify-end">
-                      <Button type="submit" disabled={isScheduling}>
+                    <div className="flex justify-end ">
+                      <Button type="submit" disabled={isScheduling} >
                         {isScheduling ? "Scheduling…" : "Schedule & get Meet link"}
                       </Button>
                     </div>
@@ -542,7 +606,7 @@ function DashboardContent() {
                 <div className="flex items-center justify-between gap-4 mb-6">
                   <div>
                     <h2 className="text-2xl font-semibold">Generate MOM</h2>
-                    <p className="mt-2 text-slate-600">
+                    <p className="mt-2 text-[var(--muted)]">
                       Upload your transcript and let AI create action items automatically.
                     </p>
                   </div>
@@ -550,7 +614,7 @@ function DashboardContent() {
                 </div>
 
                 {scheduledEvent && (
-                  <div className="mb-6 rounded-2xl border border-blue-100 bg-blue-50 p-4">
+                  <div className="mb-6 rounded-lg border border-blue-100 bg-blue-50 p-4">
                     <p className="text-sm text-blue-800">
                       Generating MOM for <span className="font-semibold">{scheduledEvent.title}</span>
                     </p>
@@ -559,38 +623,38 @@ function DashboardContent() {
 
                 <form className="space-y-6" onSubmit={handleMom(onMomSubmit)}>
                   <div className="grid gap-4 sm:grid-cols-2">
-                    <label className="space-y-2 text-sm font-medium text-slate-900">
+                    <label className="space-y-2 text-sm font-medium text-[var(--foreground)]">
                       Meeting title
                       <input
                         {...regMom("title")}
                         defaultValue={scheduledEvent?.title || ""}
-                        className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-slate-400"
+                        className="w-full rounded-lg border border-[var(--border)] bg-[var(--muted-bg)] px-4 py-3 text-sm outline-none focus:border-[var(--secondary)]"
                         placeholder="Sprint planning"
                       />
                       {momErrors.title && (
                         <p className="text-sm text-rose-600">{momErrors.title.message}</p>
                       )}
                     </label>
-                    <label className="space-y-2 text-sm font-medium text-slate-900">
+                    <label className="space-y-2 text-sm font-medium text-[var(--foreground)]">
                       Date
                       <input
                         type="date"
                         {...regMom("date")}
-                        className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-slate-400"
+                        className="w-full rounded-lg border border-[var(--border)] bg-[var(--muted-bg)] px-4 py-3 text-sm outline-none focus:border-[var(--secondary)]"
                       />
                     </label>
                   </div>
 
                   {/* Dynamic participants — MOM */}
-                  <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                    <div className="mb-4 flex items-center justify-between">
-                      <span className="text-sm font-medium text-slate-900">
+                  <div className="rounded-lg border border-[var(--border)] bg-[var(--muted-bg)] p-4">
+                    <div className="mb-4 flex items-center justify-between mt-2">
+                      <span className="text-sm font-medium text-[var(--foreground)]">
                         Participants ({momParticipants.length})
                       </span>
                       <button
                         type="button"
                         onClick={() => appendMomParticipant({ name: "", email: "" })}
-                        className="flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition"
+                        className="flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--card)] px-3 py-1 text-xs font-semibold text-[var(--foreground)] transition hover:bg-[var(--muted-bg)]"
                       >
                         <span className="text-base leading-none">+</span> Add participant
                       </button>
@@ -601,19 +665,19 @@ function DashboardContent() {
                           <input
                             {...regMom(`participants.${index}.name` as const)}
                             placeholder="Name"
-                            className="w-full rounded-3xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400"
+                            className="w-full rounded-lg border border-[var(--border)] bg-[var(--card)] px-4 py-3 text-sm outline-none focus:border-[var(--secondary)]"
                           />
                           <input
                             {...regMom(`participants.${index}.email` as const)}
                             placeholder="email@example.com"
-                            className="w-full rounded-3xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400"
+                            className="w-full rounded-lg border border-[var(--border)] bg-[var(--card)] px-4 py-3 text-sm outline-none focus:border-[var(--secondary)]"
                           />
                         </div>
                         {momParticipants.length > 1 && (
                           <button
                             type="button"
                             onClick={() => removeMomParticipant(index)}
-                            className="mt-2.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-slate-400 hover:bg-rose-50 hover:text-rose-500 transition"
+                            className="mt-2.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-[var(--muted)] hover:bg-rose-50 hover:text-rose-500 transition"
                             aria-label="Remove participant"
                           >
                             ✕
@@ -626,12 +690,12 @@ function DashboardContent() {
                     )}
                   </div>
 
-                  <label className="space-y-2 text-sm font-medium text-slate-900">
+                  <label className="space-y-2 text-sm font-medium text-[var(--foreground)]">
                     Transcript
                     <textarea
                       {...regMom("transcript")}
                       rows={8}
-                      className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-slate-400"
+                      className="w-full rounded-lg border border-[var(--border)] bg-[var(--muted-bg)] px-4 py-3 text-sm outline-none focus:border-[var(--secondary)]"
                       placeholder="Paste meeting transcript here..."
                     />
                     {momErrors.transcript && (
@@ -640,7 +704,7 @@ function DashboardContent() {
                   </label>
 
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <p className="text-sm text-slate-600">
+                    <p className="text-sm text-[var(--muted)]">
                       Generates summary, decisions, and action items.
                     </p>
                     <Button type="submit" disabled={isMomSubmitting}>
@@ -653,10 +717,10 @@ function DashboardContent() {
           </section>
 
           {/* Right panel — recent meetings */}
-          <section className="rounded-[2rem] bg-white p-8 shadow-xl">
+          <section className="rounded-lg border border-[var(--border)] bg-[var(--card)] p-6 shadow-[var(--shadow)]">
             <div>
               <h2 className="text-2xl font-semibold">Recent meetings</h2>
-              <p className="mt-2 text-slate-600">
+              <p className="mt-2 text-[var(--muted)]">
                 Quick access to your latest MOM summaries and email status.
               </p>
             </div>
@@ -664,38 +728,38 @@ function DashboardContent() {
             <div className="mt-8 space-y-4">
               {loading ? (
                 <div className="space-y-3">
-                  <div className="h-24 rounded-[1.5rem] bg-slate-100" />
-                  <div className="h-24 rounded-[1.5rem] bg-slate-100" />
+                  <div className="h-24 rounded-[1.5rem] bg-[var(--muted-bg)]" />
+                  <div className="h-24 rounded-[1.5rem] bg-[var(--muted-bg)]" />
                 </div>
               ) : recentMeetings.length === 0 ? (
-                <div className="rounded-[1.75rem] border border-dashed border-slate-300 p-8 text-center text-slate-600">
+                <div className="rounded-lg border border-dashed border-[var(--border)] bg-[var(--muted-bg)] p-8 text-center text-[var(--muted)]">
                   No meetings yet. Schedule one or generate a MOM to get started.
                 </div>
               ) : (
                 recentMeetings.map((meeting) => (
                   <div
                     key={meeting._id}
-                    className="rounded-[1.75rem] border border-slate-200 p-5 shadow-sm"
+                    className="rounded-lg border border-[var(--border)] p-5 shadow-sm transition hover:border-[var(--secondary)] hover:shadow-md"
                   >
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div>
-                        <p className="text-lg font-semibold text-slate-950">{meeting.title}</p>
-                        <p className="mt-1 text-sm text-slate-600">
+                        <p className="text-lg font-semibold text-[var(--foreground)]">{meeting.title}</p>
+                        <p className="mt-1 text-sm text-[var(--muted)]">
                           {new Date(meeting.date).toLocaleDateString()}
                         </p>
                       </div>
                       <StatusBadge status={meeting.emailStatus} />
                     </div>
-                    <div className="mt-4 flex flex-wrap gap-2 text-sm text-slate-600">
-                      {meeting.participants?.map((p: any) => (
-                        <span key={p.email} className="rounded-full bg-slate-100 px-3 py-1">
+                    <div className="mt-4 flex flex-wrap gap-2 text-sm text-[var(--muted)]">
+                      {meeting.participants?.map((p) => (
+                        <span key={p.email} className="rounded-lg bg-[var(--muted-bg)] px-3 py-1">
                           {p.name}
                         </span>
                       ))}
                     </div>
                     <button
                       type="button"
-                      className="mt-5 text-sm font-semibold text-slate-950 hover:text-slate-700"
+                      className="mt-5 text-sm cursor-pointer font-semibold text-[var(--foreground)] hover:text-[var(--secondary)]"
                       onClick={() => router.push(`/meetings/${meeting._id}`)}
                     >
                       View meeting details →
@@ -707,7 +771,44 @@ function DashboardContent() {
           </section>
         </div>
       </div>
-    </main>
+
+      {showDisconnectModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-lg border border-[var(--border)] bg-[var(--card)] p-6 shadow-[var(--shadow)]">
+            <div>
+              <p className="text-sm uppercase tracking-[0.24em] text-[var(--secondary)]">
+                Calendar
+              </p>
+              <h2 className="mt-2 text-xl font-semibold text-[var(--foreground)]">
+                Disconnect Google Meet?
+              </h2>
+              <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
+                You will not be able to schedule meetings or generate Meet links until you reconnect your calendar.
+              </p>
+            </div>
+
+            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setShowDisconnectModal(false)}
+                disabled={isDisconnecting}
+                className="rounded-lg border border-[var(--border)] cursor-pointer bg-[var(--muted-bg)] px-5 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:border-[var(--secondary)] disabled:opacity-50"
+              >
+                Keep connected
+              </button>
+              <button
+                type="button"
+                onClick={disconnectCalendar}
+                disabled={isDisconnecting}
+                className="rounded-lg border border-[var(--border)] bg-[color:var(--danger,#ef4444)] px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isDisconnecting ? "Disconnecting..." : "Disconnect"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -715,11 +816,11 @@ export default function DashboardPage() {
   return (
     <Suspense
       fallback={
-        <main className="min-h-screen bg-slate-50 px-6 py-10 text-slate-950 sm:px-10 lg:px-16">
-          <div className="mx-auto max-w-7xl rounded-[2rem] bg-white p-8 shadow-xl">
+        <div className="px-4 py-6 text-[var(--foreground)] sm:px-6 lg:px-10">
+          <div className="mx-auto max-w-[1300px] rounded-lg bg-[var(--card)] p-6 shadow-sm">
             Loading dashboard…
           </div>
-        </main>
+        </div>
       }
     >
       <DashboardContent />

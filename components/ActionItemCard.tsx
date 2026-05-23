@@ -16,13 +16,13 @@ export function ActionItemCard({
   onStatusChange,
 }: ActionItemCardProps) {
   return (
-    <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md">
+    <div className="rounded-lg border border-[var(--border)] bg-[var(--card)] p-5 shadow-[var(--shadow)] transition hover:border-[var(--secondary)]">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h3 className="text-base font-semibold text-slate-950">{task}</h3>
-          <p className="mt-2 text-sm text-slate-600">
+          <h3 className="text-base font-semibold text-[var(--foreground)]">{task}</h3>
+          <p className="mt-2 text-sm text-[var(--muted)]">
             Assigned to{" "}
-            <span className="font-medium text-slate-900">{assignee}</span>
+            <span className="font-medium text-[var(--foreground)]">{assignee}</span>
             {dueDate ? ` • Due ${new Date(dueDate).toLocaleDateString()}` : ""}
           </p>
         </div>
@@ -32,7 +32,7 @@ export function ActionItemCard({
             <select
               value={status}
               onChange={(event) => onStatusChange(event.target.value)}
-              className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm"
+              className="rounded-lg border border-[var(--border)] bg-[var(--muted-bg)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--secondary)]"
             >
               <option value="open">Open</option>
               <option value="in_progress">In progress</option>

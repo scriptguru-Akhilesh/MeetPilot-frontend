@@ -12,14 +12,14 @@ export function MomEditor({
   placeholder,
 }: MomEditorProps) {
   return (
-    <label className="block rounded-[1.75rem] border border-slate-200 bg-slate-50 p-4">
-      <span className="text-sm font-medium text-slate-900">{label}</span>
+    <label className="block rounded-lg border border-[var(--border)] bg-[var(--card)] p-4 shadow-[var(--shadow)]">
+      <span className="text-sm font-medium text-[var(--foreground)]">{label}</span>
       <textarea
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
         rows={8}
-        className="mt-3 w-full resize-none rounded-3xl border border-slate-200 bg-white px-4 py-4 text-sm text-slate-900 outline-none focus:border-slate-400"
+        className="mt-3 w-full resize-none rounded-lg border border-[var(--border)] bg-[var(--muted-bg)] px-4 py-4 text-sm text-[var(--foreground)] outline-none focus:border-[var(--secondary)]"
       />
     </label>
   );
